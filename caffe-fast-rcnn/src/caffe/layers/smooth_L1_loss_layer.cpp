@@ -67,7 +67,7 @@ namespace caffe {
     vector<Blob<Dtype>*> blob_top_vec_;
   };
 
-  TYPED_TEST_CASE(SmoothL1LossLayerTest, TestDtypesGPU);
+  //  TYPED_TEST_CASE(SmoothL1LossLayerTest, TestDtypesGPU);
 
   TYPED_TEST(SmoothL1LossLayerTest, TestGradient) {
     typedef typename TypeParam::Dtype Dtype;
