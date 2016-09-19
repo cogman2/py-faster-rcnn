@@ -16,7 +16,7 @@
 
 namespace caffe {
 
-  typedef ::testing::Types<GPUDevice<float>, GPUDevice<double> > TestDtypesGPU;
+  //  typedef ::testing::Types<GPUDevice<float>, GPUDevice<double> > TestDtypesGPU;
 
   template <typename TypeParam>
   class SmoothL1LossLayerTest : public MultiDeviceTest<TypeParam> {
