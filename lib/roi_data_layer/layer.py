@@ -119,6 +119,7 @@ class RoIDataLayer(caffe.Layer):
             self._name_to_top_map['labels'] = idx
             idx += 1
 
+            cfg.TRAIN.BBOX_REG = False
             if cfg.TRAIN.BBOX_REG:
                 # bbox_targets blob: R bounding-box regression targets with 4
                 # targets per class

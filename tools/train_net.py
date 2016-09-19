@@ -87,7 +87,7 @@ if __name__ == '__main__':
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
 
-    cfg.GPU_ID = args.gpu_id
+#    cfg.GPU_ID = args.gpu_id
 
     print('Using config:')
     pprint.pprint(cfg)
@@ -98,8 +98,8 @@ if __name__ == '__main__':
         caffe.set_random_seed(cfg.RNG_SEED)
 
     # set up caffe
-    caffe.set_mode_gpu()
-    caffe.set_device(args.gpu_id)
+    caffe.set_mode_cpu()
+#    caffe.set_device(args.gpu_id)
 
     imdb, roidb = combined_roidb(args.imdb_name)
     print '{:d} roidb entries'.format(len(roidb))
