@@ -69,7 +69,7 @@ namespace caffe {
 
   //  TYPED_TEST_CASE(SmoothL1LossLayerTest, TestDtypesGPU);
 
-  TYPED_TEST(SmoothL1LossLayerTest, TestGradient) {
+  /*  TYPED_TEST(SmoothL1LossLayerTest, TestGradient) {
     typedef typename TypeParam::Dtype Dtype;
     LayerParameter layer_param;
   SmoothL1LossParameter* loss_param =
@@ -85,6 +85,6 @@ namespace caffe {
 				  this->blob_top_vec_, 0);
   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
 				  this->blob_top_vec_, 1);
-  }
+				  } */
 
 }  // namespace caffe
