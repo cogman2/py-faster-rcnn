@@ -1,90 +1,108 @@
-#include <cmath>
-#include <cstdlib>
-#include <cstring>
+// ------------------------------------------------------------------
+// Fast R-CNN
+// copyright (c) 2015 Microsoft
+// Licensed under The MIT License [see fast-rcnn/LICENSE for details]
+// Written by Ross Girshick
+// Modified by Wei Liu
+// ------------------------------------------------------------------
+
 #include <vector>
 
-#include "gtest/gtest.h"
-
-#include "caffe/blob.hpp"
-#include "caffe/common.hpp"
-#include "caffe/filler.hpp"
-//#include "caffe/vision_layers.hpp"
-#include "caffe/fast_rcnn_layers.hpp"
-
-#include "caffe/test/test_caffe_main.hpp"
-#include "caffe/test/test_gradient_check_util.hpp"
+#include "caffe/layers/smooth_L1_loss_layer.hpp"
+#include "caffe/util/math_functions.hpp"
 
 namespace caffe {
 
-  //  typedef ::testing::Types<GPUDevice<float>, GPUDevice<double> > TestDtypesGPU;
+  template <typename Dtype>
+  void SmoothL1LossLayer<Dtype>::LayerSetUp(
+					    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+    LossLayer<Dtype>::LayerSetUp(bottom, top);
+    has_weights_ = (bottom.size() == 3);
+  }
 
-  template <typename TypeParam>
-  class SmoothL1LossLayerTest : public MultiDeviceTest<TypeParam> {
-    typedef typename TypeParam::Dtype Dtype;
-
-  protected:
-    SmoothL1LossLayerTest()
-      : blob_bottom_data_(new Blob<Dtype>(10, 5, 1, 1)),
-        blob_bottom_label_(new Blob<Dtype>(10, 5, 1, 1)),
-        blob_bottom_inside_weights_(new Blob<Dtype>(10, 5, 1, 1)),
-        blob_bottom_outside_weights_(new Blob<Dtype>(10, 5, 1, 1)),
-        blob_top_loss_(new Blob<Dtype>()) {
-      // fill the values
-      FillerParameter const_filler_param;
-      const_filler_param.set_value(-1.);
-      ConstantFiller<Dtype> const_filler(const_filler_param);
-      FillerParameter filler_param;
-      GaussianFiller<Dtype> filler(filler_param);
-
-      filler.Fill(this->blob_bottom_data_);
-      blob_bottom_vec_.push_back(blob_bottom_data_);
-      filler.Fill(this->blob_bottom_label_);
-      blob_bottom_vec_.push_back(blob_bottom_label_);
-
-      //const_filler.Fill(this->blob_bottom_inside_weights_);
-      filler.Fill(this->blob_bottom_inside_weights_);
-      blob_bottom_vec_.push_back(blob_bottom_inside_weights_);
-      //const_filler.Fill(this->blob_bottom_outside_weights_);
-      filler.Fill(this->blob_bottom_outside_weights_);
-      blob_bottom_vec_.push_back(blob_bottom_outside_weights_);
-
-      blob_top_vec_.push_back(blob_top_loss_);
+  template <typename Dtype>
+  void SmoothL1LossLayer<Dtype>::Reshape(
+					 const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+    LossLayer<Dtype>::Reshape(bottom, top);
+    CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
+    CHECK_EQ(bottom[0]->height(), bottom[1]->height());
+    CHECK_EQ(bottom[0]->width(), bottom[1]->width());
+    if (has_weights_) {
+      CHECK_EQ(bottom[0]->channels(), bottom[2]->channels());
+      CHECK_EQ(bottom[0]->height(), bottom[2]->height());
+      CHECK_EQ(bottom[0]->width(), bottom[2]->width());
     }
-    virtual ~SmoothL1LossLayerTest() {
-      delete blob_bottom_data_;
-      delete blob_bottom_label_;
-      delete blob_bottom_inside_weights_;
-      delete blob_bottom_outside_weights_;
-      delete blob_top_loss_;
+    diff_.Reshape(bottom[0]->num(), bottom[0]->channels(),
+		  bottom[0]->height(), bottom[0]->width());
+    errors_.Reshape(bottom[0]->num(), bottom[0]->channels(),
+		    bottom[0]->height(), bottom[0]->width());
+  }
+
+  template <typename Dtype>
+  void SmoothL1LossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+					     const vector<Blob<Dtype>*>& top) {
+    int count = bottom[0]->count();
+    caffe_sub(
+	      count,
+	      bottom[0]->cpu_data(),
+	      bottom[1]->cpu_data(),
+	      diff_.mutable_cpu_data());
+    if (has_weights_) {
+      caffe_mul(
+		count,
+		bottom[2]->cpu_data(),
+		diff_.cpu_data(),
+		diff_.mutable_cpu_data());  // d := w * (b0 - b1)
     }
+    const Dtype* diff_data = diff_.cpu_data();
+    Dtype* error_data = errors_.mutable_cpu_data();
+    for (int i = 0; i < count; ++i) {
+      Dtype val = diff_data[i];
+      Dtype abs_val = fabs(val);
+      if (abs_val < 1.) {
+	error_data[i] = 0.5 * val * val;
+      } else {
+	error_data[i] = abs_val - 0.5;
+      }
+    }
+    top[0]->mutable_cpu_data()[0] =
+      caffe_cpu_asum(count, errors_.cpu_data()) / bottom[0]->num();
+  }
 
-    Blob<Dtype>* const blob_bottom_data_;
-    Blob<Dtype>* const blob_bottom_label_;
-    Blob<Dtype>* const blob_bottom_inside_weights_;
-    Blob<Dtype>* const blob_bottom_outside_weights_;
-    Blob<Dtype>* const blob_top_loss_;
-    vector<Blob<Dtype>*> blob_bottom_vec_;
-    vector<Blob<Dtype>*> blob_top_vec_;
-  };
+  template <typename Dtype>
+  void SmoothL1LossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
+					      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+    int count = diff_.count();
+    Dtype* diff_data = diff_.mutable_cpu_data();
+    for (int i = 0; i < count; ++i) {
+      Dtype val = diff_data[i];
+      // f'(x) = x         if |x| < 1
+      //       = sign(x)   otherwise
+      if (fabs(val) < 1.) {
+	diff_data[i] = val;
+      } else {
+	diff_data[i] = (Dtype(0) < val) - (val < Dtype(0));
+      }
+    }
+    for (int i = 0; i < 2; ++i) {
+      if (propagate_down[i]) {
+	const Dtype sign = (i == 0) ? 1 : -1;
+	const Dtype alpha = sign * top[0]->cpu_diff()[0] / bottom[i]->num();
+	caffe_cpu_axpby(
+			bottom[i]->count(),               // count
+			alpha,                            // alpha
+			diff_.cpu_data(),                 // a
+			Dtype(0),                         // beta
+			bottom[i]->mutable_cpu_diff());   // b
+      }
+    }
+  }
 
-  //  TYPED_TEST_CASE(SmoothL1LossLayerTest, TestDtypesGPU);
+#ifdef CPU_ONLY
+  STUB_GPU(SmoothL1LossLayer);
+#endif
 
-  /*  TYPED_TEST(SmoothL1LossLayerTest, TestGradient) {
-    typedef typename TypeParam::Dtype Dtype;
-    LayerParameter layer_param;
-  SmoothL1LossParameter* loss_param =
-    layer_param.mutable_smooth_l1_loss_param();
-  loss_param->set_sigma(2.4);
-
-  const Dtype kLossWeight = 3.7;
-  layer_param.add_loss_weight(kLossWeight);
-  SmoothL1LossLayer<Dtype> layer(layer_param);
-  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-  GradientChecker<Dtype> checker(1e-2, 1e-2, 1701);
-  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
-				  this->blob_top_vec_, 0);
-  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
-				  this->blob_top_vec_, 1);
-				  } */
+  INSTANTIATE_CLASS(SmoothL1LossLayer);
+  REGISTER_LAYER_CLASS(SmoothL1Loss);
 
 }  // namespace caffe
