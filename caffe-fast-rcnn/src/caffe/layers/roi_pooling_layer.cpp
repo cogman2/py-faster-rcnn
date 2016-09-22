@@ -3,10 +3,10 @@
 
 #include <vector>
 
+#include "caffe/layers/roi_pooling_layer.hpp"
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
-#include "caffe/layers/roi_pooling_layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 
 // Source:  https://raw.githubusercontent.com/Austriker/caffe/3c27a70ae7304feb48c60b268c70adf585879d50/include/caffe/layers/roi_pooling_layer.hpp
