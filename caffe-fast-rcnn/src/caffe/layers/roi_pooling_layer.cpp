@@ -7,7 +7,7 @@
 
 #include <cfloat>
 
-//#include "caffe/custom_layers.hpp"
+#include "caffe/custom_layers.hpp"
 
 using std::max;
 using std::min;
