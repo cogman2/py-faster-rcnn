@@ -1,13 +1,8 @@
-// ------------------------------------------------------------------
-// Fast R-CNN
-// Copyright (c) 2015 Microsoft
-// Licensed under The MIT License [see fast-rcnn/LICENSE for details]
-// Written by Ross Girshick
-// ------------------------------------------------------------------
-
+#include <algorithm>
 #include <cfloat>
+#include <vector>
 
-#include "caffe/layers/custom_layers.hpp"
+#include "caffe/vision_layers.hpp"
 
 using std::max;
 using std::min;
@@ -33,6 +28,10 @@ namespace caffe {
   template <typename Dtype>
   void ROIPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 				       const vector<Blob<Dtype>*>& top) {
+    CHECK_EQ(bottom[1]->channels(), 5)
+      << "roi input shape should be (R, 5) or (R, 5, 1, 1)";
+    CHECK_EQ(bottom[1]->num() * bottom[1]->channels(), bottom[1]->count())
+      << "roi input shape should be (R, 5) or (R, 5, 1, 1)";
     channels_ = bottom[0]->channels();
     height_ = bottom[0]->height();
     width_ = bottom[0]->width();
@@ -59,10 +58,10 @@ namespace caffe {
     // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
     for (int n = 0; n < num_rois; ++n) {
       int roi_batch_ind = bottom_rois[0];
-      int roi_start_w = floorf(bottom_rois[1] * spatial_scale_ + 0.5);
-      int roi_start_h = floorf(bottom_rois[2] * spatial_scale_ + 0.5);
-      int roi_end_w = floorf(bottom_rois[3] * spatial_scale_ + 0.5);
-      int roi_end_h = floorf(bottom_rois[4] * spatial_scale_ + 0.5);
+      int roi_start_w = round(bottom_rois[1] * spatial_scale_);
+      int roi_start_h = round(bottom_rois[2] * spatial_scale_);
+      int roi_end_w = round(bottom_rois[3] * spatial_scale_);
+      int roi_end_h = round(bottom_rois[4] * spatial_scale_);
       CHECK_GE(roi_batch_ind, 0);
       CHECK_LT(roi_batch_ind, batch_size);
 
@@ -127,7 +126,39 @@ namespace caffe {
   template <typename Dtype>
   void ROIPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 					    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-    NOT_IMPLEMENTED;
+    if (propagate_down[1]) {
+      LOG(FATAL) << this->type()
+		 << " Layer cannot backpropagate to roi inputs.";
+    }
+    if (!propagate_down[0]) {
+      return;
+    }
+    const Dtype* bottom_rois = bottom[1]->cpu_data();
+    const Dtype* top_diff = top[0]->cpu_diff();
+    Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
+    caffe_set(bottom[0]->count(), Dtype(0.), bottom_diff);
+    const int* argmax_data = max_idx_.cpu_data();
+    const int num_rois = top[0]->num();
+
+    // Accumulate gradient over all ROIs
+    for (int roi_n = 0; roi_n < num_rois; ++roi_n) {
+      int roi_batch_ind = bottom_rois[roi_n * 5];
+      // Accumulate gradients over each bin in this ROI
+      for (int c = 0; c < channels_; ++c) {
+	for (int ph = 0; ph < pooled_height_; ++ph) {
+	  for (int pw = 0; pw < pooled_width_; ++pw) {
+	    int offset_top = ((roi_n * channels_ + c) * pooled_height_ + ph)
+              * pooled_width_ + pw;
+	    int argmax_index = argmax_data[offset_top];
+	    if (argmax_index >= 0) {
+	      int offset_bottom = (roi_batch_ind * channels_ + c) * height_
+                * width_ + argmax_index;
+	      bottom_diff[offset_bottom] += top_diff[offset_top];
+	    }
+	  }
+	}
+      }
+    }
   }
 
 
