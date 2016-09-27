@@ -2,7 +2,7 @@
 #include <cfloat>
 #include <vector>
 
-#include "caffe/vision_layers.hpp"
+//#include "caffe/vision_layers.hpp"
 
 using std::max;
 using std::min;
