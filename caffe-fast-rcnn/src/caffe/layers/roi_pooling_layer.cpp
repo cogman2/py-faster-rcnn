@@ -13,7 +13,7 @@ using std::ceil;
 namespace caffe {
 
   template <typename Dtype>
-  void ROIPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+  void ROIPoolingLayer::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 					  const vector<Blob<Dtype>*>& top) {
     ROIPoolingParameter roi_pool_param = this->layer_param_.roi_pooling_param();
     CHECK_GT(roi_pool_param.pooled_h(), 0)
@@ -27,7 +27,7 @@ namespace caffe {
   }
 
   template <typename Dtype>
-  void ROIPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
+  void ROIPoolingLayer::Reshape(const vector<Blob<Dtype>*>& bottom,
 				       const vector<Blob<Dtype>*>& top) {
     CHECK_EQ(bottom[1]->channels(), 5)
       << "roi input shape should be (R, 5) or (R, 5, 1, 1)";
@@ -43,7 +43,7 @@ namespace caffe {
   }
 
   template <typename Dtype>
-  void ROIPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+  void ROIPoolingLayer::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 					   const vector<Blob<Dtype>*>& top) {
     const Dtype* bottom_data = bottom[0]->cpu_data();
     const Dtype* bottom_rois = bottom[1]->cpu_data();
@@ -125,7 +125,7 @@ namespace caffe {
   }
 
   template <typename Dtype>
-  void ROIPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
+  void ROIPoolingLayer::Backward_cpu(const vector<Blob<Dtype>*>& top,
 					    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
     if (propagate_down[1]) {
       LOG(FATAL) << this->type()
