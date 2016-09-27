@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <vector>
-
+#include <cmath>
 //#include "caffe/vision_layers.hpp"
 
 using std::max;
