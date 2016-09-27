@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 //#include "caffe/vision_layers.hpp"
+#include "caffe/roi_pooling_layer.hpp"
 
 using std::max;
 using std::min;
