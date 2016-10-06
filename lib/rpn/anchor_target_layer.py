@@ -71,8 +71,8 @@ class AnchorTargetLayer(caffe.Layer):
         # filter out-of-image anchors
         # measure GT overlap
 
-        assert bottom[0].data.shape[0] == 1, \
-            'Only single item batches are supported'
+#        assert bottom[0].data.shape[0] == 1, \
+#            'Only single item batches are supported'
 
         # map of shape (..., H, W)
         height, width = bottom[0].data.shape[-2:]

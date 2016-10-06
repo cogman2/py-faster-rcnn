@@ -130,23 +130,23 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
 #        print "bbox_target_data", bbox_target_data[1,]
 #        print "bbox_target_data shape", bbox_target_data[1,].shape
 #
-'''        print "inds is: ", inds
-        print "ind, start, end ", ind, start, end
-        print "bbox_target_data[ind, 1:]", bbox_target_data[ind, 1:]
-        print "bbox_target_data[ind, 1:] shape", bbox_target_data[ind, 1:].shape
-        print "bbox_targets[ind, start:end]", bbox_targets[ind, int(start):int(end)]
-        print "bbox_targets[ind, start:end] shape", bbox_targets[ind, start:end].shape
-        print "bbox_targets[:, start:end]", bbox_targets[:, int(start):int(end)]
-        print "bbox_targets[:,start:end] shape", bbox_targets[:, int(start):int(end)].shape
-        print "bbox_inside_weights[:, :]", bbox_inside_weights[:,:]
-        print "bbox_inside_weights[:,:] shape", bbox_inside_weights[:, :].shape
-        print "bbox_inside_weights[ind, 0:4]", bbox_inside_weights[ind, 0:4]
-        print "bbox_inside_weights[ind, 0:4] shape", bbox_inside_weights[ind, 0:4].shape
-'''
+#        print "inds is: ", inds
+#        print "ind, start, end ", ind, start, end
+#        print "bbox_target_data[ind, 1:]", bbox_target_data[ind, 1:]
+#        print "bbox_target_data[ind, 1:] shape", bbox_target_data[ind, 1:].shape
+#        print "bbox_targets[ind, start:end]", bbox_targets[ind, int(start):int(end)]
+#        print "bbox_targets[ind, start:end] shape", bbox_targets[ind, start:end].shape
+#        print "bbox_targets[:, start:end]", bbox_targets[:, int(start):int(end)]
+#        print "bbox_targets[:,start:end] shape", bbox_targets[:, int(start):int(end)].shape
+#        print "bbox_inside_weights[:, :]", bbox_inside_weights[:,:]
+#        print "bbox_inside_weights[:,:] shape", bbox_inside_weights[:, :].shape
+#        print "bbox_inside_weights[ind, 0:4]", bbox_inside_weights[ind, 0:4]
+#        print "bbox_inside_weights[ind, 0:4] shape", bbox_inside_weights[ind, 0:4].shape
+
 #        bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
-        bbox_targets[ind, 0:(end-start)] = bbox_target_data[ind, 1:]
+        bbox_targets[int(ind), 0:int(end-start)] = bbox_target_data[int(ind), 1:]
 #        bbox_inside_weights[ind, start:end] = cfg.TRAIN.BBOX_INSIDE_WEIGHTS
-        bbox_inside_weights[ind, 0:(end-start)] = cfg.TRAIN.BBOX_INSIDE_WEIGHTS
+        bbox_inside_weights[int(ind), 0:int(end-start)] = cfg.TRAIN.BBOX_INSIDE_WEIGHTS
     return bbox_targets, bbox_inside_weights
 
 

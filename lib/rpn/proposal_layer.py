@@ -58,8 +58,8 @@ class ProposalLayer(caffe.Layer):
         # take after_nms_topN proposals after NMS
         # return the top proposals (-> RoIs top, scores top)
 
-        assert bottom[0].data.shape[0] == 1, \
-            'Only single item batches are supported'
+#        assert bottom[0].data.shape[0] == 1, \
+#            'Only single item batches are supported'
 
         cfg_key = str(self.phase) # either 'TRAIN' or 'TEST'
         pre_nms_topN  = cfg[cfg_key].RPN_PRE_NMS_TOP_N
